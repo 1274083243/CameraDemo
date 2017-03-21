@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="ike.com.camerademo.MainActivity">
+    tools:context="ike.com.camerademo.ui.MainActivity">
 
     <SurfaceView
         android:id="@+id/sf_view"
@@ -17,6 +17,12 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:text="照相" />
+    <Button
+        android:id="@+id/btn_record_video"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:text="视频录制" />
     <ImageView
         android:id="@+id/iv_pic"
         android:layout_width="wrap_content"

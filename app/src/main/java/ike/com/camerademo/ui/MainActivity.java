@@ -1,4 +1,4 @@
-package ike.com.camerademo;
+package ike.com.camerademo.ui;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 
+import ike.com.camerademo.R;
 import ike.com.camerademo.widget.RectView;
 
 public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback, View.OnClickListener {
@@ -30,7 +31,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     private Camera mCanmera;
     private SurfaceHolder mHolder;
     private static String Tag = "MainActivity";
-    private Button btn_take_photo;
+    private Button btn_take_photo,btn_record_video;
     private ImageView iv_pic;
     private RectView rect_view;
     private int widthPixels;
@@ -45,9 +46,11 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         setContentView(R.layout.activity_main);
         sf_view = (SurfaceView) findViewById(R.id.sf_view);
         btn_take_photo= (Button) findViewById(R.id.btn_take_photo);
+        btn_record_video= (Button) findViewById(R.id.btn_record_video);
         iv_pic= (ImageView) findViewById(R.id.iv_pic);
         rect_view= (RectView) findViewById(R.id.rect_view);
         btn_take_photo.setOnClickListener(this);
+        btn_record_video.setOnClickListener(this);
         mHolder = sf_view.getHolder();
         mHolder.addCallback(this);
 
@@ -108,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     @Override
     public void onClick(View v) {
         switch (v.getId()){
-            case R.id.btn_take_photo:
+            case R.id.btn_take_photo://拍摄照片
                 mCanmera.takePicture(null, null, new Camera.PictureCallback() {
                     @Override
                     public void onPictureTaken(byte[] data, Camera camera) {
@@ -133,29 +136,11 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                         mCanmera.startPreview();
                     }
                 });
+                //拍摄小视频
+            case R.id.btn_record_video:
+
                 break;
         }
-    }
-
-    /**生成拍照后图片的中间矩形的宽度和高度
-     * @param w 屏幕上的矩形宽度，单位px
-     * @param h 屏幕上的矩形高度，单位px
-     * @return
-     */
-    private Point createCenterPictureRect(int w, int h){
-
-        int wScreen = widthPixels;
-        int hScreen = heightPixels;
-        int wSavePicture = mCanmera.getParameters().getPictureSize().height; //因为图片旋转了，所以此处宽高换位
-        int hSavePicture = mCanmera.getParameters().getPictureSize().width; //因为图片旋转了，所以此处宽高换位
-        float wRate = (float)(wSavePicture) / (float)(wScreen);
-        float hRate = (float)(hSavePicture) / (float)(hScreen);
-        float rate = (wRate <= hRate) ? wRate : hRate;//也可以按照最小比率计算
-
-        int wRectPicture = (int)( w * wRate);
-        int hRectPicture = (int)( h * hRate);
-        return new Point(wRectPicture, hRectPicture);
-
     }
     public Bitmap setTakePicktrueOrientation(int id, Bitmap bitmap) {
         Camera.CameraInfo info = new Camera.CameraInfo();
@@ -182,18 +167,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 bitmap.getWidth(), bitmap.getHeight(), matrix, true);
         return resizedBitmap;
     }
-    //升序 按照高度
-    public class CameraAscendSizeComparatorForHeight implements Comparator<Camera.Size> {
-        public int compare(Camera.Size lhs, Camera.Size rhs) {
-            if (lhs.height == rhs.height) {
-                return 0;
-            } else if (lhs.height > rhs.height) {
-                return 1;
-            } else {
-                return -1;
-            }
-        }
-    }
+
 
     /**
      * 查询最适合previewsize，或者是pictureSize
@@ -213,36 +187,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                     sizes = camera.getParameters().getSupportedPictureSizes();
                 }
 
-        if (sizes == null) return null;
-        //找到宽度差距最小的
-        for(Camera.Size size:sizes){
-            if (Math.abs(size.width - width) < minWidthDiff) {
-                minWidthDiff = Math.abs(size.width - width);
-            }
-        }
-        //在宽度差距最小的里面，找到高度差距最小的
-        for(Camera.Size size:sizes){
-            if(Math.abs(size.width - width) == minWidthDiff) {
-                if(Math.abs(size.height - height) < minHeightDiff) {
-                    optimalSize = size;
-                    minHeightDiff = Math.abs(size.height - height);
-                }
-            }
-        }
-        return optimalSize;
-    }
-    /**
-     * 查询最适合PictureSize
-     * @param camera
-     * @param width
-     * @param height
-     * @return
-     */
-    public static Camera.Size getOptimalPictureSize(Camera camera, int width, int height) {
-        Camera.Size optimalSize = null;
-        double minHeightDiff = Double.MAX_VALUE;
-        double minWidthDiff = Double.MAX_VALUE;
-        List<Camera.Size> sizes = camera.getParameters().getSupportedPictureSizes();
         if (sizes == null) return null;
         //找到宽度差距最小的
         for(Camera.Size size:sizes){
