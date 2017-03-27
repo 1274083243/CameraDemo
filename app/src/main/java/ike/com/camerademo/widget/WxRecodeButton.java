@@ -4,6 +4,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -15,6 +16,9 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
+
+import java.security.PublicKey;
+
 import ike.com.camerademo.R;
 
 /**
@@ -40,7 +44,10 @@ public class WxRecodeButton extends View {
     private float progress;
     private Rect textRect;//文本绘制矩形
     private int radios;//圆的半径
-
+    private RecordType CURRENT_TYPE=RecordType.TAKE_PICTURE;
+    private LongTouchCheckRunnable longTouchCheckRunnable;
+    private int RECORD_TIME;
+    private boolean hasRecordFinish;//录制是否完成
     public WxRecodeButton(Context context) {
         this(context, null);
     }
@@ -51,7 +58,25 @@ public class WxRecodeButton extends View {
 
     public WxRecodeButton(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        TypedArray a=context.obtainStyledAttributes(attrs,R.styleable.WxRecodeButton);
+        RECORD_TIME=a.getInteger(R.styleable.WxRecodeButton_record_time,5*1000);
+        a.recycle();
         init(context);
+    }
+
+    public int getRecordTime() {
+       return this.RECORD_TIME;
+    }
+
+    public  enum  RecordType{
+        /**
+         * 拍摄照片
+         */
+        TAKE_PICTURE,
+        /**
+         * 录制视频
+         */
+        RECORD_VEDIO
     }
 
     /**
@@ -62,6 +87,7 @@ public class WxRecodeButton extends View {
     private void init(Context context) {
         initPaint();
         initAnimator();
+        longTouchCheckRunnable=new LongTouchCheckRunnable();
     }
 
     /**
@@ -78,7 +104,6 @@ public class WxRecodeButton extends View {
             }
         });
         mBigAnimator.setFloatValues(1.0f, 1.2f);
-
         mRestoreAnimator=creatValueAnimator();
         mRestoreAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -86,14 +111,19 @@ public class WxRecodeButton extends View {
                 canDrawProgress = false;
                 setVisibility(GONE);
                 if (listener != null) {
-                    listener.onUp();
+                    if (current_progress==100.0f){
+                        listener.onRecordVedioFinnish();
+
+                    }else {
+                        listener.onRecordVedioUp();
+                    }
+
                 }
             }
         });
         mRestoreAnimator.setFloatValues(1.2f, 1.0f);
-
         progressAnimator = new ValueAnimator();
-        progressAnimator.setDuration(3000);
+        progressAnimator.setDuration(RECORD_TIME);
         progressAnimator.setFloatValues(1, 100);
         progressAnimator.setInterpolator(new DecelerateInterpolator());
         progressAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
@@ -101,6 +131,10 @@ public class WxRecodeButton extends View {
             public void onAnimationUpdate(ValueAnimator animation) {
                 current_progress = (float) animation.getAnimatedValue();
                 progress = current_progress * 1.0f / 100 * 360;
+                if (listener!=null&&current_progress==100.0f){
+                    hasRecordFinish=true;
+                    resumeAnimator();
+                }
                 invalidate();
             }
         });
@@ -171,8 +205,6 @@ public class WxRecodeButton extends View {
             textPaint.getTextBounds(text, 0, text.length(), textRect);
             canvas.drawText(text, width / 2 - textRect.width() / 2, height / 2 + textRect.height() / 2, textPaint);
         }
-
-
     }
 
     /**
@@ -201,40 +233,80 @@ public class WxRecodeButton extends View {
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                //执行放大动画
-
-                bigAnimator();
+               CheckForLongTouch();
                 break;
             case MotionEvent.ACTION_MOVE:
                 break;
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
-
-                resumeAnimator();
+                removeCallbacks(longTouchCheckRunnable);
+                if (CURRENT_TYPE==RecordType.RECORD_VEDIO){
+                    //带表视频录制还未完成手指抬起，则执行缩小回复动画
+                    if (!hasRecordFinish){
+                        resumeAnimator();
+                    }
+                }else {
+                    if (listener!=null){
+                        listener.onTakePicUp();
+                    }
+                }
+                //重置状态
+                hasRecordFinish=false;
+                CURRENT_TYPE=RecordType.TAKE_PICTURE;
                 break;
         }
         return true;
     }
 
     /**
+     * 检查当前事件是否是长按事件
+     */
+    private void CheckForLongTouch() {
+        postDelayed(longTouchCheckRunnable,500);
+    }
+
+    /**
      * 该按钮的按下与松开的事件监听
      */
     public interface RecordButtonTouchListener {
-//        /**
-//         * 按钮按下
-//         */
-//        void onDown();
+        /**
+         * 按钮松开:拍摄照片（点击松手）
+         */
+       void onTakePicUp();
 
         /**
-         * 按钮松开
+         * 按钮松开:录制视频（长按松手）
          */
-        void onUp();
+        void onRecordVedioUp();
+        /**
+         * 按钮按下:录制视频（长按按下：开始录制视频）
+         */
+        void onRecordVedioDown();
+
+        /**
+         * 视频录制完成
+         */
+         void onRecordVedioFinnish();
     }
 
     private RecordButtonTouchListener listener;
 
     public void setRecordButtonTouchListener(RecordButtonTouchListener listener) {
         this.listener = listener;
+    }
+
+    /**
+     * 检查是否是长按的任务
+     */
+    public class LongTouchCheckRunnable implements Runnable{
+        @Override
+        public void run() {
+            CURRENT_TYPE=RecordType.RECORD_VEDIO;
+            bigAnimator();
+            if (listener!=null){
+                listener.onRecordVedioDown();
+            }
+        }
     }
 
 

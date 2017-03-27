@@ -2,15 +2,9 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-
-    <SurfaceView
-        android:id="@+id/sf_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
     <ike.com.camerademo.WxRecordbuttonLayout
+        android:id="@+id/record_view"
         android:layout_width="match_parent"
-        android:layout_height="160dp"
-        android:layout_alignParentBottom="true"
-        android:background="@android:color/transparent" />
+        android:layout_height="match_parent"
+        />
 </RelativeLayout>
